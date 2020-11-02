@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 10 September 2020
+# 02 November 2020
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -52,6 +52,10 @@ WHITEONPURPLE='\033[0;46m'
 NC='\033[0m'
 TMP_SCRATCH=/tmp/fox_build_000tmp.txt
 WORKING_TMP=/tmp/Fox_000_tmp
+
+# make sure we know exactly which "cp" command we are running
+CP=/bin/cp
+[ ! -x "$CP" ] && CP=cp
 
 # exit function (cleanup first), and return status code
 abort() {
@@ -187,7 +191,7 @@ fi
 [ -n "$OF_TARGET_DEVICES" -a -z "$TARGET_DEVICE_ALT" ] && export TARGET_DEVICE_ALT="$OF_TARGET_DEVICES"
 
 # copy recovery.img
-[ -f $OUT/recovery.img ] && cp -r $OUT/recovery.img $RECOVERY_IMAGE
+[ -f $OUT/recovery.img ] && $CP $OUT/recovery.img $RECOVERY_IMAGE
 
 # 2GB version
 RECOVERY_IMAGE_2GB=$OUT/$FOX_OUT_NAME"_lite.img"
@@ -291,20 +295,20 @@ local TDT=$(date "+%d %B %Y")
   cd $OF_WORKING_DIR
 
   # copy documentation
-  cp -a $FOX_VENDOR_PATH/Files/INSTALL.txt .
+  $CP -p $FOX_VENDOR_PATH/Files/INSTALL.txt .
   
   # copy recovery image
-  cp -a $RECOVERY_IMAGE ./recovery.img
+  $CP -p $RECOVERY_IMAGE ./recovery.img
    
   # copy installer bins and script 
-  cp -a $INST_DIR/* .
+  $CP -pr $INST_DIR/* .
 
   # copy FoxFiles/ to sdcard/Fox/
-  cp -a $FILES_DIR/ sdcard/Fox
+  $CP -a $FILES_DIR/ sdcard/Fox
   
   # any local changes to a port's installer directory?
   if [ -n "$FOX_PORTS_INSTALLER" ] && [ -d "$FOX_PORTS_INSTALLER" ]; then
-     cp -a $FOX_PORTS_INSTALLER/* . 
+     $CP -pr $FOX_PORTS_INSTALLER/* . 
   fi
   
   # patch update-binary (which is a script) to run only for the current device 
@@ -340,7 +344,11 @@ local TDT=$(date "+%d %B %Y")
   # A/B devices
   if [ "$OF_AB_DEVICE" = "1" ]; then
      echo -e "${RED}-- A/B device - copying magiskboot to zip installer ... ${NC}"
-     cp -af $FOX_RAMDISK/sbin/magiskboot .
+     tmp=$FOX_RAMDISK/$RAMDISK_BIN/magiskboot
+     [ ! -e $tmp ] && tmp=$(find $TARGET_RECOVERY_ROOT_OUT -name magiskboot)
+     [ ! -e $tmp ] && tmp=/tmp/fox_build_tmp/magiskboot
+     rm -rf /tmp/fox_build_tmp/
+     $CP -pf $tmp .
      sed -i -e "s/^OF_AB_DEVICE=.*/OF_AB_DEVICE=\"1\"/" $F
   fi
 
@@ -411,7 +419,7 @@ local TDT=$(date "+%d %B %Y")
   # create update zip for "lite" version
   if [ "$BUILD_2GB_VERSION" = "1" ]; then
   	rm -f ./recovery.img
-  	cp -a $RECOVERY_IMAGE_2GB ./recovery.img
+  	$CP -p $RECOVERY_IMAGE_2GB ./recovery.img
   	ZIP_CMD="zip --exclude=*.git* --exclude=OrangeFox*.zip* -r9 $ZIP_FILE_GO ."
   	echo "- Running ZIP command: $ZIP_CMD"
   	$ZIP_CMD -z <$FOX_VENDOR_PATH/Files/INSTALL.txt
@@ -513,7 +521,7 @@ local F=""
       if [ "$FOX_USE_BASH_SHELL" = "1" ]; then
           rm -f $FOX_RAMDISK/sbin/sh
           if [ -f $WORKING_TMP/sh ] || [ -h $WORKING_TMP/sh -a "$(readlink $WORKING_TMP/sh)" != "bash" ]; then
-             cp -a $WORKING_TMP/sh $FOX_RAMDISK/sbin/
+             $CP -p $WORKING_TMP/sh $FOX_RAMDISK/sbin/
           else
              F=$(readlink $FOX_RAMDISK/sbin/umount)
              [ -z "$F" ] && F=$(readlink $FOX_RAMDISK/sbin/uname)
@@ -524,14 +532,14 @@ local F=""
       if [ "$FOX_ASH_IS_BASH" = "1" ]; then
           rm -f $FOX_RAMDISK/sbin/ash
           if [ -h $WORKING_TMP/ash -a "$(readlink $WORKING_TMP/ash)" != "bash" ]; then
-             cp -a $WORKING_TMP/ash $FOX_RAMDISK/sbin/
+             $CP -p $WORKING_TMP/ash $FOX_RAMDISK/sbin/
           fi
       fi
       
       if [ "$FOX_USE_UNZIP_BINARY" = "1" ]; then
          [ -e $WORKING_TMP/unzip -o -h $WORKING_TMP/unzip ] && { 
             rm -f $FOX_RAMDISK/sbin/unzip
-            cp -af $WORKING_TMP/unzip $FOX_RAMDISK/sbin/
+            $CP -apf $WORKING_TMP/unzip $FOX_RAMDISK/sbin/
          }
       fi
       
@@ -626,23 +634,23 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
   case "$TARGET_ARCH" in
   "arm")
       echo -e "${GREEN}-- ARM arch detected. Copying ARM binaries${NC}"
-      cp "$FOX_VENDOR_PATH/prebuilt/arm/mkbootimg" "$FOX_RAMDISK/sbin"
-      cp "$FOX_VENDOR_PATH/prebuilt/arm/unpackbootimg" "$FOX_RAMDISK/sbin"
+      $CP "$FOX_VENDOR_PATH/prebuilt/arm/mkbootimg" "$FOX_RAMDISK/sbin"
+      $CP "$FOX_VENDOR_PATH/prebuilt/arm/unpackbootimg" "$FOX_RAMDISK/sbin"
       ;;
   "arm64")
       echo -e "${GREEN}-- ARM64 arch detected. Copying ARM64 binaries${NC}"
-      cp "$FOX_VENDOR_PATH/prebuilt/arm64/mkbootimg" "$FOX_RAMDISK/sbin"
-      cp "$FOX_VENDOR_PATH/prebuilt/arm64/unpackbootimg" "$FOX_RAMDISK/sbin"
+      $CP "$FOX_VENDOR_PATH/prebuilt/arm64/mkbootimg" "$FOX_RAMDISK/sbin"
+      $CP "$FOX_VENDOR_PATH/prebuilt/arm64/unpackbootimg" "$FOX_RAMDISK/sbin"
       ;;
   "x86")
       echo -e "${GREEN}-- x86 arch detected. Copying x86 binaries${NC}"
-      cp "$FOX_VENDOR_PATH/prebuilt/x86/mkbootimg" "$FOX_RAMDISK/sbin"
-      cp "$FOX_VENDOR_PATH/prebuilt/x86/unpackbootimg" "$FOX_RAMDISK/sbin"
+      $CP "$FOX_VENDOR_PATH/prebuilt/x86/mkbootimg" "$FOX_RAMDISK/sbin"
+      $CP "$FOX_VENDOR_PATH/prebuilt/x86/unpackbootimg" "$FOX_RAMDISK/sbin"
       ;;
   "x86_64")
       echo -e "${GREEN}-- x86_64 arch detected. Copying x86_64 binaries${NC}"
-      cp "$FOX_VENDOR_PATH/prebuilt/x86_64/mkbootimg" "$FOX_RAMDISK/sbin"
-      cp "$FOX_VENDOR_PATH/prebuilt/x86_64/unpackbootimg" "$FOX_RAMDISK/sbin"
+      $CP "$FOX_VENDOR_PATH/prebuilt/x86_64/mkbootimg" "$FOX_RAMDISK/sbin"
+      $CP "$FOX_VENDOR_PATH/prebuilt/x86_64/unpackbootimg" "$FOX_RAMDISK/sbin"
       ;;
     *) echo -e "${RED}-- Couldn't detect current device architecture or it is not supported${NC}" ;;
   esac
@@ -650,10 +658,10 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
   # build standard (3GB) version
   # copy over vendor FFiles/ and vendor sbin/ stuff before creating the boot image
   #[ "$FOX_BUILD_DEBUG_MESSAGES" = "1" ] && echo "- FOX_BUILD_DEBUG_MESSAGES: Copying: $FOX_VENDOR_PATH/FoxExtras/* to $FOX_RAMDISK/"
-  cp -ar $FOX_VENDOR_PATH/FoxExtras/* $FOX_RAMDISK/
+  $CP -pr $FOX_VENDOR_PATH/FoxExtras/* $FOX_RAMDISK/
 
   # copy resetprop (armeabi)
-  cp -a $FOX_VENDOR_PATH/Files/resetprop $FOX_RAMDISK/sbin/
+  $CP -p $FOX_VENDOR_PATH/Files/resetprop $FOX_RAMDISK/sbin/
     
   # deal with magiskboot/mkbootimg/unpackbootimg
   if [ "$OF_USE_MAGISKBOOT" != "1" ]; then
@@ -665,7 +673,10 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
         echo -e "${GREEN}-- Using magiskboot [$FOX_RAMDISK/sbin/magiskboot] - deleting mkbootimg/unpackbootimg ...${NC}"
         rm -f $FOX_RAMDISK/sbin/mkbootimg
         rm -f $FOX_RAMDISK/sbin/unpackbootimg
-     fi
+        echo -e "${GREEN}-- Backing up $FOX_RAMDISK/sbin/magiskboot to: /tmp/fox_build_tmp/ ...${NC}"
+        mkdir -p /tmp/fox_build_tmp/
+        $CP -pf $FOX_RAMDISK/sbin/magiskboot /tmp/fox_build_tmp/
+      fi
   fi
 
   # try to fix toolbox egrep/fgrep symlink bug
@@ -703,7 +714,7 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
      echo -e "${GREEN}-- Replacing the busybox \"lzma\" command with our own full version ...${NC}"
      rm -f $FOX_RAMDISK/sbin/lzma
      rm -f $FOX_RAMDISK/sbin/xz
-     cp -a $FOX_VENDOR_PATH/Files/xz $FOX_RAMDISK/sbin/lzma
+     $CP -p $FOX_VENDOR_PATH/Files/xz $FOX_RAMDISK/sbin/lzma
      ln -s lzma $FOX_RAMDISK/sbin/xz
   fi
   
@@ -711,7 +722,7 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
   if [ "$OF_SUPPORT_PRE_FLASH_SCRIPT" = "1" ]; then
      echo -e "${GREEN}-- OF_SUPPORT_PRE_FLASH_SCRIPT=1 (system_root device); copying fox_pre_flash to sbin ...${NC}"
      echo -e "${GREEN}-- Make sure that you mount both /system *and* /system_root in your fstab.${NC}"     
-     cp -a $FOX_VENDOR_PATH/Files/fox_pre_flash $FOX_RAMDISK/sbin
+     $CP -p $FOX_VENDOR_PATH/Files/fox_pre_flash $FOX_RAMDISK/sbin
   fi
 
   # remove the green LED setting?
@@ -768,8 +779,8 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
      rm -f $FOX_RAMDISK/etc/bash.bashrc
   else
      echo -e "${GREEN}-- Copying bash ...${NC}"
-     cp -a $FOX_VENDOR_PATH/Files/bash $FOX_RAMDISK/sbin/bash
-     cp -a $FOX_VENDOR_PATH/Files/fox.bashrc $FOX_RAMDISK/etc/bash.bashrc
+     $CP -p $FOX_VENDOR_PATH/Files/bash $FOX_RAMDISK/sbin/bash
+     $CP -p $FOX_VENDOR_PATH/Files/fox.bashrc $FOX_RAMDISK/etc/bash.bashrc
      chmod 0755 $FOX_RAMDISK/sbin/bash
      if [ "$FOX_ASH_IS_BASH" = "1" ]; then
         export FOX_USE_BASH_SHELL="1"     
@@ -781,7 +792,7 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
      if [ -f "$FOX_RAMDISK/sbin/sh" ]; then 
         if [ "$FOX_DRASTIC_SIZE_REDUCTION" = "1" -o $BUILD_2GB_VERSION = "1" ]; then
            echo -e "${GREEN}-- Backing up the original \"sh\" ...${NC}"
-      	   cp -af $FOX_RAMDISK/sbin/sh $WORKING_TMP/
+      	   $CP -pf $FOX_RAMDISK/sbin/sh $WORKING_TMP/
         fi
 
         echo -e "${GREEN}-- Replacing the busybox \"sh\" applet with bash ...${NC}"
@@ -795,7 +806,7 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
      if [ "$FOX_DRASTIC_SIZE_REDUCTION" = "1" -o $BUILD_2GB_VERSION = "1" ]; then
         [ -f $FOX_RAMDISK/sbin/ash -o -h $FOX_RAMDISK/sbin/ash ] && {
            echo -e "${GREEN}-- Backing up the original \"ash\" ...${NC}"
-           cp -af $FOX_RAMDISK/sbin/ash $WORKING_TMP/
+           $CP -pf $FOX_RAMDISK/sbin/ash $WORKING_TMP/
         }
      fi
      
@@ -809,14 +820,14 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
   # Include nano editor ?
   if [ "$FOX_USE_NANO_EDITOR" = "1" ]; then
       echo -e "${GREEN}-- Copying nano editor ...${NC}"
-      cp -af $FOX_VENDOR_PATH/Files/nano/ $FOX_RAMDISK/FFiles/
-      cp -af $FOX_VENDOR_PATH/Files/nano/sbin/nano $FOX_RAMDISK/sbin/
+      $CP -af $FOX_VENDOR_PATH/Files/nano/ $FOX_RAMDISK/FFiles/
+      $CP -af $FOX_VENDOR_PATH/Files/nano/sbin/nano $FOX_RAMDISK/sbin/
   fi
 
   # Include standalone "tar" binary ?
   if [ "$FOX_USE_TAR_BINARY" = "1" ]; then
       echo -e "${GREEN}-- Copying the GNU \"tar\" binary (gnutar) ...${NC}"
-      cp -af $FOX_VENDOR_PATH/Files/gnutar $FOX_RAMDISK/sbin/
+      $CP -pf $FOX_VENDOR_PATH/Files/gnutar $FOX_RAMDISK/sbin/
       chmod 0755 $FOX_RAMDISK/sbin/gnutar
   fi
 
@@ -824,12 +835,12 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
   if [ "$FOX_USE_UNZIP_BINARY" = "1" -a -x $FOX_VENDOR_PATH/Files/unzip ]; then
       if [ "$FOX_DRASTIC_SIZE_REDUCTION" = "1" -o $BUILD_2GB_VERSION = "1" ]; then
          echo -e "${GREEN}-- Backing up the original unzip ...${NC}"
-      	 cp -af $FOX_RAMDISK/sbin/unzip $WORKING_TMP/
+      	 $CP -pf $FOX_RAMDISK/sbin/unzip $WORKING_TMP/
       fi
       
       echo -e "${GREEN}-- Copying the OrangeFox InfoZip \"unzip\" binary ...${NC}"
       rm -f $FOX_RAMDISK/sbin/unzip
-      cp -af $FOX_VENDOR_PATH/Files/unzip $FOX_RAMDISK/sbin/
+      $CP -pf $FOX_VENDOR_PATH/Files/unzip $FOX_RAMDISK/sbin/
       chmod 0755 $FOX_RAMDISK/sbin/unzip
   fi
 
@@ -841,7 +852,7 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
       }
   else
       echo -e "${GREEN}-- Copying the OrangeFox InfoZip \"zip\" binary ...${NC}"
-      cp -af $FOX_VENDOR_PATH/Files/zip $FOX_RAMDISK/sbin/
+      $CP -pf $FOX_VENDOR_PATH/Files/zip $FOX_RAMDISK/sbin/
       chmod 0755 $FOX_RAMDISK/sbin/zip
   fi
 
@@ -861,7 +872,7 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
   fi
 
   # Include mmgui
-  cp -a $FOX_VENDOR_PATH/Files/mmgui $FOX_RAMDISK/sbin/mmgui
+  $CP -p $FOX_VENDOR_PATH/Files/mmgui $FOX_RAMDISK/sbin/mmgui
   chmod 0755 $FOX_RAMDISK/sbin/mmgui
 
   # Include aapt (1.7mb!) ?
@@ -870,7 +881,7 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
      # remove aapt if it is there from a previous build
      rm -f $FOX_RAMDISK/sbin/aapt
   else
-     cp -a $FOX_VENDOR_PATH/Files/aapt $FOX_RAMDISK/sbin/aapt
+     $CP -p $FOX_VENDOR_PATH/Files/aapt $FOX_RAMDISK/sbin/aapt
      chmod 0755 $FOX_RAMDISK/sbin/aapt
   fi
 
@@ -880,9 +891,9 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
   sed -i -E "s+\"magisk_ver\" value=\"(.*)\"+\"magisk_ver\" value=\"$MAGISK_VER\"+" $FOX_RAMDISK/twres/ui.xml
 
   # Include text files
-  cp -a $FOX_VENDOR_PATH/Files/credits.txt $FOX_RAMDISK/twres/credits.txt
-  cp -a $FOX_VENDOR_PATH/Files/translators.txt $FOX_RAMDISK/twres/translators.txt
-  cp -a $FOX_VENDOR_PATH/Files/changelog.txt $FOX_RAMDISK/twres/changelog.txt
+  $CP -p $FOX_VENDOR_PATH/Files/credits.txt $FOX_RAMDISK/twres/credits.txt
+  $CP -p $FOX_VENDOR_PATH/Files/translators.txt $FOX_RAMDISK/twres/translators.txt
+  $CP -p $FOX_VENDOR_PATH/Files/changelog.txt $FOX_RAMDISK/twres/changelog.txt
 
   # if a local callback script is declared, run it, passing to it the ramdisk directory (first call)
   if [ -n "$FOX_LOCAL_CALLBACK_SCRIPT" ] && [ -x "$FOX_LOCAL_CALLBACK_SCRIPT" ]; then
@@ -944,7 +955,7 @@ if [ -z "$FOX_VENDOR_CMD" ] || [ "$FOX_VENDOR_CMD" = "Fox_After_Recovery_Image" 
      SAMSUNG_DEVICE=$(file_getprop "$DEFAULT_PROP" "ro.product.manufacturer")
      if [ "$FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER" = "1" ]; then
   	echo -e "${GREEN}-- Copying recovery: \"$INSTALLED_RECOVERYIMAGE_TARGET\" --> \"$RECOVERY_IMAGE\" ${NC}"
-        cp -af "$INSTALLED_RECOVERYIMAGE_TARGET" "$RECOVERY_IMAGE"
+        $CP -pf "$INSTALLED_RECOVERYIMAGE_TARGET" "$RECOVERY_IMAGE"
   	if [ "$SAMSUNG_DEVICE" = "samsung" -a "$OF_NO_SAMSUNG_SPECIAL" != "1" ]; then
      	   echo -e "${RED}-- Appending SEANDROIDENFORCE to $RECOVERY_IMAGE ${NC}"
      	   echo -n "SEANDROIDENFORCE" >> $RECOVERY_IMAGE
