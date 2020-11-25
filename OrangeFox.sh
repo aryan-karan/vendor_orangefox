@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 02 November 2020
+# 25 November 2020
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -274,6 +274,23 @@ expand_vendor_path() {
   }
 }
 
+# save build vars
+save_build_vars() {
+local F=$1
+   export | grep "FOX_" > $F
+   export | grep "OF_" >> $F
+   sed -i '/FOX_BUILD_LOG_FILE/d' $F
+   sed -i '/FOX_LOCAL_CALLBACK_SCRIPT/d' $F
+   sed -i '/FOX_PORTS_TMP/d' $F
+   sed -i '/FOX_RAMDISK/d' $F
+   sed -i '/FOX_WORK/d' $F
+   sed -i '/FOX_VENDOR_DIR/d' $F
+   sed -i '/FOX_VENDOR_CMD/d' $F
+   sed -i '/FOX_VENDOR/d' $F
+   sed -i '/OF_MAINTAINER/d' $F
+   sed -i "s/declare -x //g" $F
+}
+
 # create zip file
 do_create_update_zip() {
 local TDT=$(date "+%d %B %Y")
@@ -293,6 +310,10 @@ local TDT=$(date "+%d %B %Y")
   # recreate dir
   mkdir -p $OF_WORKING_DIR
   cd $OF_WORKING_DIR
+
+  # create some others
+  mkdir -p $OF_WORKING_DIR/sdcard/Fox
+  mkdir -p $OF_WORKING_DIR/META-INF/debug
 
   # copy documentation
   $CP -p $FOX_VENDOR_PATH/Files/INSTALL.txt .
@@ -400,19 +421,28 @@ local TDT=$(date "+%d %B %Y")
      $FOX_LOCAL_CALLBACK_SCRIPT "$OF_WORKING_DIR" "--last-call"
   fi
 
+  # save the build vars
+  save_build_vars "$OF_WORKING_DIR/META-INF/debug/fox_build_vars.txt"
+  tmp="$FOX_RAMDISK/prop.default"
+  [ ! -e "$tmp" ] && tmp="$DEFAULT_PROP"
+  [ ! -e "$tmp" ] && tmp="$FOX_RAMDISK/default.prop"
+  [ -e "$tmp" ] && $CP "$tmp" "$OF_WORKING_DIR/META-INF/debug/default.prop"
+
   # create update zip
   ZIP_CMD="zip --exclude=*.git* -r9 $ZIP_FILE ."
   echo "- Running ZIP command: $ZIP_CMD"
   $ZIP_CMD -z <$FOX_VENDOR_PATH/Files/INSTALL.txt
    
-  #  sign zip installer
-  #if [ -f $ZIP_FILE ]; then
-  #   ZIP_CMD="$FOX_VENDOR_PATH/signature/sign_zip.sh -z $ZIP_FILE"
-  #   echo "- Running ZIP command: $ZIP_CMD"
-  #   $ZIP_CMD
-  #fi
+  # sign zip installer
+  if [ -f $ZIP_FILE ]; then
+     ZIP_CMD="$FOX_VENDOR_PATH/signature/sign_zip.sh -z $ZIP_FILE"
+     echo "- Running ZIP command: $ZIP_CMD"
+     $ZIP_CMD
+     echo "- Adding comments (again):"
+     zip $ZIP_FILE -z <$FOX_VENDOR_PATH/Files/INSTALL.txt > /dev/null 2>&1
+  fi
 
-  #Creating ZIP md5
+  # Creating ZIP md5
   echo -e "${BLUE}-- Creating md5 for $ZIP_FILE${NC}"
   cd "$OUT" && md5sum "$ZIP_FILE" > "$ZIP_FILE.md5" && cd - > /dev/null 2>&1
 
@@ -423,13 +453,17 @@ local TDT=$(date "+%d %B %Y")
   	ZIP_CMD="zip --exclude=*.git* --exclude=OrangeFox*.zip* -r9 $ZIP_FILE_GO ."
   	echo "- Running ZIP command: $ZIP_CMD"
   	$ZIP_CMD -z <$FOX_VENDOR_PATH/Files/INSTALL.txt
+  	
   	#  sign zip installer ("lite" version)
-  	# if [ -f $ZIP_FILE_GO ]; then
-   #  	   ZIP_CMD="$FOX_VENDOR_PATH/signature/sign_zip.sh -z $ZIP_FILE_GO"
-   #  	   echo "- Running ZIP command: $ZIP_CMD"
-   #  	   $ZIP_CMD
-   #  	fi
-    #md5 Go zip
+  	if [ -f $ZIP_FILE_GO ]; then
+     	   ZIP_CMD="$FOX_VENDOR_PATH/signature/sign_zip.sh -z $ZIP_FILE_GO"
+     	   echo "- Running ZIP command: $ZIP_CMD"
+     	   $ZIP_CMD
+     	   echo "- Adding comments (again):"
+     	   zip $ZIP_FILE_GO -z <$FOX_VENDOR_PATH/Files/INSTALL.txt > /dev/null 2>&1
+     	fi
+    
+    # md5 lite zip
     echo -e "${BLUE}-- Creating md5 for $ZIP_FILE_GO${NC}"
     cd "$OUT" && md5sum "$ZIP_FILE_GO" > "$ZIP_FILE_GO.md5" && cd - > /dev/null 2>&1
   fi
