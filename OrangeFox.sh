@@ -440,7 +440,8 @@ local TDT=$(date "+%d %B %Y")
   fi
 
   if [ -z "$JAVA8" ]; then
-     echo -e "${RED}-- java-8 not found. Not signing the zip file. ${NC}"
+     echo -e "${WHITEONRED}-- java-8 cannot be found! The zip file will NOT be signed! ${NC}"
+     echo -e "${WHITEONRED}-- This build CANNOT be released officially! ${NC}"
   elif [ -f $ZIP_FILE  ]; then
      ZIP_CMD="$FOX_VENDOR_PATH/signature/sign_zip.sh -z $ZIP_FILE"
      echo "- Running ZIP command: $ZIP_CMD"
@@ -463,7 +464,8 @@ local TDT=$(date "+%d %B %Y")
   	
   	#  sign zip installer ("lite" version)
   	if [ -z "$JAVA8" ]; then
-     	   echo -e "${RED}-- java-8 not found. Not signing the zip file. ${NC}"
+     	   echo -e "${WHITEONRED}-- java-8 cannot be found! The zip file will NOT be signed! ${NC}"
+     	   echo -e "${WHITEONRED}-- This build CANNOT be released officially! ${NC}"
   	elif [ -f $ZIP_FILE_GO ]; then
      	   ZIP_CMD="$FOX_VENDOR_PATH/signature/sign_zip.sh -z $ZIP_FILE_GO"
      	   echo "- Running ZIP command: $ZIP_CMD"
