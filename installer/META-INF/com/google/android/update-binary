@@ -45,13 +45,46 @@ OF_VANILLA_BUILD=0
 FOX_R11=0
 
 # last_modified
-MOD_DATE="20200907"
+MOD_DATE="20201201"
   
 # sundry glodal defaults
-SYS_DIR="/system"
+# VEND_DIR="/vendor"
+# SYS_DIR="/system"
+VEND_DIR="/mnt/vendor"
+SYS_DIR="/mnt/system"
 SYS_ROOT="$SYS_DIR"
 ETC_DIR="$SYS_DIR/etc"
 SAR="0"
+
+BUSYBOX=$(which busybox)
+if [ -z "$BUSYBOX" ]; then
+   BUSYBOX=/system/bin/busybox
+   [ ! -e "$BUSYBOX" ] && BUSYBOX=/sbin/busybox
+fi
+
+TOYBOX=$(which toybox)
+if [ -z "$TOYBOX" ]; then
+   TOYBOX=/system/bin/toybox
+   [ ! -e "$TOYBOX" ] && TOYBOX=/sbin/toybox
+fi
+
+GETPROP=$(which getprop)
+if [ -z "$GETPROP" ]; then
+   GETPROP=/system/bin/getprop
+   [ ! -e "$GETPROP" ] && GETPROP=/sbin/getprop
+fi
+
+FLASH_IMAGE=$(which flash_image)
+if [ -z "$FLASH_IMAGE" ]; then
+   FLASH_IMAGE=/system/bin/flash_image
+   [ ! -e "$FLASH_IMAGE" ] && FLASH_IMAGE=/sbin/flash_image
+fi
+
+ERASE_IMAGE=$(which erase_image)
+if [ -z "$ERASE_IMAGE" ]; then
+   ERASE_IMAGE=/system/bin/erase_image
+   [ ! -e "$ERASE_IMAGE" ] && ERASE_IMAGE=/sbin/erase_image
+fi
 
 # ui_print "<message>" ["<message 2>" ...]
 ui_print() {
@@ -130,12 +163,12 @@ package_extract_file() {
 
 # file_getprop <file> <property>
 file_getprop() { 
-  grep "^$2=" "$1" | cut -d= -f2
+  grep -m1 "^$2=" "$1" | cut -d= -f2
 }
 
 # getprop <property>
 getprop() { 
-   [ -e /sbin/getprop ] && /sbin/getprop $1 || grep "^$1=" /default.prop | head -n1 | cut -d= -f2
+   [ -e $GETPROP ] && $GETPROP $1 || grep "^$1=" /default.prop | head -n1 | cut -d= -f2
 }
 
 # abort [<message>]
@@ -147,7 +180,7 @@ abort() {
 
 # avoid the standalone BSD grep, which segfaults on "grep -w"
 find_grep() {
-local GREP=/sbin/grep
+local GREP=$(which grep)
 local F=/prop.default
 
    if [ ! -e $F ]; then
@@ -157,17 +190,17 @@ local F=/prop.default
 
    if [ ! -L $GREP ]; then
      GREP=""
-     if [ -x /sbin/busybox ]; then
-        GREP="/sbin/busybox grep"
+     if [ -x $BUSYBOX ]; then
+        GREP="$BUSYBOX grep"
 	$GREP -q build $F > /dev/null 2>&1 || GREP=""
      fi
      
-     if [ -z "$GREP" -a -x /sbin/toybox ]; then
-        GREP="/sbin/toybox grep"
+     if [ -z "$GREP" -a -x $TOYBOX ]; then
+        GREP="$TOYBOX grep"
         $GREP -q build $F > /dev/null 2>&1 || GREP=""
      fi
 
-     [ -z "$GREP" ] && GREP=/sbin/grep
+     [ -z "$GREP" ] && GREP=/system/bin/grep
    fi
 
  echo "$GREP"
@@ -194,17 +227,43 @@ CheckRequirements() {
 
 # do we have a SAR build?
 is_SAR() {
-  local F=$(getprop "ro.build.system_root_image")
-  [ "$F" != "true" -a "$(getprop ro.twrp.sar)" != "true" ] && {
-    echo "0"
-    return  
+  local F=$($GETPROP "ro.build.system_root_image")
+  [ "$F" = "true" ] && {
+    echo "1"
+    return
   }
+
+  F=$($GETPROP "ro.boot.dynamic_partitions")
+  [ "$F" = "true" ] && {
+    echo "1"
+    return
+  }
+
+  F=$($GETPROP "ro.orangefox.sar")
+  [ "$F" = "1" ] && {
+    echo "1"
+    return
+  }
+  
+  F=$(grep -s "/system_root" "/etc/fstab")
+  [ -n "$F" ] && {
+     echo "1"
+     return
+  }
+  
   [ -L "/system" -a -d "/system_root" ] && {
     echo "1"
     return
   }
+
   F=$(grep -s "/system_root" "/proc/mounts")
-  [ -n "$F" ] && echo "1" || echo "0"
+  [ -n "$F" ] && {
+     echo "1"
+     return
+  }
+
+  F=$($GETPROP ro.twrp.sar)
+  [ "$F" = "true" ] && echo "1" || echo "0"
 }
 
 # file/directory/block exists
@@ -220,7 +279,11 @@ Exists() {
 
 # mount everything we might need
 MountThemAll() {
-local sys="/system"
+local sys="/mnt/system"
+
+	mkdir -p $SYS_DIR
+	mkdir -p $VEND_DIR
+	
 	# /system
     	SAR=$(is_SAR)
     	[ "$SAR" = "1" ] && sys="/system_root"
@@ -238,19 +301,19 @@ local sys="/system"
 	fi
 
     	# /vendor
-    	F=$(is_mounted "/vendor")
+    	F=$(is_mounted "$VEND_DIR")
     	if [ "$F" = "0" ]; then
-    	   mount "/vendor" > /dev/null 2>&1    	   
-    	   F=$(is_mounted "/vendor")
-    	   [ "$F" = "0" ] && mount -t ext4 $VENDOR_PARTITION /vendor > /dev/null 2>&1	   
+    	   mount "$VEND_DIR" > /dev/null 2>&1    	   
+    	   F=$(is_mounted "$VEND_DIR")
+    	   [ "$F" = "0" ] && mount -t ext4 $VENDOR_PARTITION $VEND_DIR > /dev/null 2>&1	   
 	fi
 } 
 
 # unmount everything that we mounted
 UnMountThemAll() {
    umount_part "$SYS_ROOT"
-   umount_part "/system" > /dev/null 2>&1
-   umount_part "/vendor"
+   umount_part "$SYS_DIR" > /dev/null 2>&1
+   umount_part "$VEND_DIR"
    umount_part "/cache"
    umount_part "/persist"
    umount_part "/data"
@@ -267,19 +330,19 @@ local RF=$1
 }
 
 Disable_stock_recovery_overwrites() {
-local ToRename="/system/bin/install-recovery.sh
+local ToRename="$SYS_DIR/bin/install-recovery.sh
 $ETC_DIR/install-recovery.sh
 $ETC_DIR/recovery-resource.dat
 $SYS_ROOT/recovery-from-boot.p
 $SYS_DIR/recovery-from-boot.p
-/system/vendor/bin/install-recovery.sh
-/system/vendor/etc/install-recovery.sh
-/system/vendor/etc/recovery-resource.dat
-/system/vendor/recovery-from-boot.p
-/vendor/recovery-from-boot.p
-/vendor/bin/install-recovery.sh
-/vendor/etc/install-recovery.sh
-/vendor/etc/recovery-resource.dat"
+$SYS_DIR/vendor/bin/install-recovery.sh
+$SYS_DIR/vendor/etc/install-recovery.sh
+$SYS_DIR/vendor/etc/recovery-resource.dat
+$SYS_DIR/vendor/recovery-from-boot.p
+$VEND_DIR/recovery-from-boot.p
+$VEND_DIR/bin/install-recovery.sh
+$VEND_DIR/etc/install-recovery.sh
+$VEND_DIR/etc/recovery-resource.dat"
 
    for i in $ToRename
    do
@@ -289,8 +352,8 @@ $SYS_DIR/recovery-from-boot.p
 
 # Whether this is really a proper A/B device
 Is_AB_Device() {
-local S=$(getprop "ro.boot.slot_suffix")
-local U=$(getprop "ro.build.ab_update")
+local S=$($GETPROP "ro.boot.slot_suffix")
+local U=$($GETPROP "ro.build.ab_update")
    if [ -n "$S" -a "$U" = "true" ]; then
       echo "1"
    else
@@ -380,30 +443,68 @@ Unzip_Installer_Package() {
 }
 
 # routine for flashing on A/B devices (credits: osm0sis)
+# argument: "0" (if there is no recovery partition); or recovery partition size (if there is one)
 AB_Install_Recovery() {
+local part_size="$1"
 local tool="$EX_DIR"/magiskboot
 local target="$EX_DIR"/boot.img
 local slot
 local name
+local PART
 
    	cd "$EX_DIR"
-   	chmod 0755 "$tool"
+   	
+   	if [ ! -f "$tool" ]; then
+   	   tool=$(which magiskboot)
+   	   [ -z "$tool" ] && abort "- I cannot find magiskboot. Quitting!"
+   	fi
 
-   	# extract the ramdisk from the OrangeFox image
-   	ui_print "- Extracting the OrangeFox ramdisk ..."
-   	"$tool" unpack recovery.img || abort "- I cannot extract the OrangeFox ramdisk. Quitting!"
-   	rm -f kernel dtb kernel_dtb
-   	cp -f ramdisk.cpio ramdisk-ofrp.cpio
-   	rm -f ramdisk.cpio
+   	if [ ! -f "recovery.img" ]; then
+   	   abort "- I cannot find the OrangeFox recovery image. Quitting!"
+   	fi
 
 	# target partition without the slot suffix
-	if [ -e /dev/block/bootdevice/by-name/recovery_b ]; then
-		target=/dev/block/bootdevice/by-name/recovery
+	[ -z "$part_size" ] && part_size="0"
+	if [ -e /dev/block/bootdevice/by-name/recovery_b -a "$part_size" != "0" ]; then
+	    target="/dev/block/bootdevice/by-name/recovery"
+	    name="recovery"
 	else
-		target=/dev/block/bootdevice/by-name/boot
+	    ui_print "- Standard A/B device ..."
+	    target="/dev/block/bootdevice/by-name/boot"
+	    name="boot"
 	fi
-	name=$(basename $target)
 
+	# if we have a recovery  partition - install the recovery image to recovery _a /_b
+	if [ "$name" = "recovery" ]; then
+	   ui_print "- A/B device - a recovery partition exists"
+	   # check against partition size - again
+	   local rec_size=$(FileSize "recovery.img")
+	   [ $rec_size -gt $part_size ] && abort "The recovery image ($rec_size bytes) is bigger than your recovery partition ($part_size bytes)! Quitting."
+	   # if we get here, it is safe to flash the image to the recovery _a /_b slots
+	   tmp=$($GETPROP "ro.boot.slot_suffix")
+	   ui_print "- The active slot is $tmp ..."
+	   for slot in _a _b; do
+		ui_print "- Installing OrangeFox to slot $slot..."
+		PART=$target"$slot"
+		blockdev --setrw $PART
+		package_extract_file "recovery.img" "$PART"
+	   done
+	   return
+	fi
+
+   	# extract the ramdisk from the OrangeFox image
+   	chmod 0755 "$tool"
+   	ui_print "- Extracting the OrangeFox ramdisk ..."
+   	"$tool" unpack recovery.img || abort "- I cannot extract the OrangeFox ramdisk. Quitting!"
+
+	# deal with ramdisk cpio
+   	if [ ! -f "ramdisk.cpio" ]; then
+   	   abort "- Error extracting the OrangeFox ramdisk. Quitting!"
+   	fi
+   	cp -f ramdisk.cpio ramdisk-ofrp.cpio
+   	rm -f ramdisk.cpio
+   	rm -f kernel dtb kernel_dtb
+	
 	# deal with both slots
 	for slot in _a _b; do
 		ui_print "- Running boot image patcher on slot $name$slot..."
@@ -424,6 +525,7 @@ local name
 		cp -f ramdisk-ofrp.cpio ramdisk.cpio
 		"$tool" repack boot.img || abort "- I cannot repack the $name$slot image!"
 
+		blockdev --setrw $target$slot
 		cat new-boot.img /dev/zero > $target$slot 2>/dev/null || true
 		rm -f boot.img dtb kernel new-boot.img ramdisk.cpio header
 		"$tool" cleanup
@@ -444,6 +546,7 @@ local name
 FileSize() {
   if [ -f $1 ]; then
      set -- $(ls -l "$1"); echo "$5"
+     # stat -c %s "$1"
   else
      echo "0"
   fi
@@ -461,43 +564,57 @@ local Is_ABD="0"
     [ "$OF_AB_DEVICE" = "1" -o "$(Is_AB_Device)" = "1" ] && Is_ABD="1"
     [ "$Is_ABD" = "1" ] && {
        ui_print "- The device is an A/B device."
+       # verify that there is no recovery partition
        [ -z "$ttmp" ] && {
-          AB_Install_Recovery
+          AB_Install_Recovery "0"
           return
        }
        # if we get here, it is A/B, but it has a recovery partition!
        ui_print "- But it also has a recovery partition!"
     }
 
+    # get the size of the recovery partition
     local bak="/tmp/org_recovery.img"
-    dd if="$PART" of=$bak > /dev/null 2>&1
+    dd bs=1048576 if="$PART" of=$bak > /dev/null 2>&1
     local oldF=$(FileSize $bak)
     local newF=$(FileSize recovery.img)
     ui_print "- Partition_Size=$oldF bytes; Recovery_Size=$newF bytes"
-    [  $newF -gt $oldF ] && {
+    [ $newF -gt $oldF ] && {
        rm -f $bak
        [ "$Is_ABD" = "1" -a "$oldF" = "0" ] && {
-          ui_print "- Hmmm ... an A/B device with a zero byte recovery partition!"
-          ui_print "- Resorting to the A/B installation procedure..."
-          AB_Install_Recovery
-          return
+          PART=$PART"_a"
+          dd bs=1048576 if="$PART" of=$bak > /dev/null 2>&1
+          oldF=$(FileSize $bak)
+          rm -f $bak
+          if [ "$oldF" = "0" ]; then
+             ui_print "- Hmmm ... an A/B device with a zero byte recovery partition!"
+             ui_print "- Resorting to the A/B installation procedure..."
+             AB_Install_Recovery "0"
+             return
+          else
+             ui_print "- Recovery parition exists! Using the A/B installation procedure..."
+             ui_print "- Partition_Size=$oldF bytes; Recovery_Size=$newF bytes"
+             [ $newF -gt $oldF ] && abort "The recovery image ($newF bytes) is bigger than your recovery partition ($oldF bytes)! Quitting."
+             AB_Install_Recovery "$oldF"
+             return
+          fi
        }
        abort "The recovery image ($newF bytes) is bigger than your recovery partition ($oldF bytes)! Quitting."
     }
     
-    if [ -x "/sbin/flash_image" ] && [ -x "/sbin/erase_image" ]; then
+    if [ -x "$FLASH_IMAGE" ] && [ -x "$ERASE_IMAGE" ]; then
        ui_print "- Cleaning the recovery partition ($PART)"
-       /sbin/erase_image "$PART"
+       $ERASE_IMAGE "$PART"
        [ $? == 0 ] && ui_print "- Succeeded." || ui_print "- Failed."
 
        ui_print "- Flashing OrangeFox recovery..."
-       /sbin/flash_image "$PART" "$EX_DIR/recovery.img"    
+       $FLASH_IMAGE "$PART" "$EX_DIR/recovery.img"    
        [ $? == 0 ] && ui_print "- Succeeded." || {
        	   ui_print "- Problems encountered. Trying an alternative flashing method..."
        	   package_extract_file "recovery.img" "$PART"
        	   [ $? == 0 ] && ui_print "- Succeeded." || {
        	      ui_print "- Flashing failed. Trying to restore original recovery..."
-       	      /sbin/flash_image "$PART" "$bak"
+       	      $FLASH_IMAGE "$PART" "$bak"
        	      [ $? == 0 ] && ui_print "- Succeeded." || abort "- Failed! There is now no recovery! Flash a working recovery via fastboot."
        	   }
        }
