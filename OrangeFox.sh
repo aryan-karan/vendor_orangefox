@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 30 November 2020
+# 02 December 2020
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -405,9 +405,14 @@ local TDT=$(date "+%d %B %Y")
   fi
 
   # use anykernel3 version of OF_initd
-  echo -e "${GREEN}-- Using OF_initd-ak3 zip ...${NC}"
   rm -f $OF_WORKING_DIR/sdcard/Fox/FoxFiles/OF_initd.zip
-  mv $OF_WORKING_DIR/sdcard/Fox/FoxFiles/OF_initd-ak3.zip $OF_WORKING_DIR/sdcard/Fox/FoxFiles/OF_initd.zip
+  if [ "$FOX_DELETE_INITD_ADDON" = "1" ]; then
+     echo -e "${GREEN}-- Deleting the initd addon ...${NC}"
+     rm -f $OF_WORKING_DIR/sdcard/Fox/FoxFiles/OF_initd*.zip
+  else
+     echo -e "${GREEN}-- Using OF_initd-ak3 zip ...${NC}"
+     mv -f $OF_WORKING_DIR/sdcard/Fox/FoxFiles/OF_initd-ak3.zip $OF_WORKING_DIR/sdcard/Fox/FoxFiles/OF_initd.zip
+  fi
   
   # alternative/additional device codename? (eg, "kate" (for kenzo); "willow" (for ginkgo))
   if [ -n "$TARGET_DEVICE_ALT" ]; then
