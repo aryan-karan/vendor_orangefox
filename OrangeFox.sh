@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 02 December 2020
+# 03 December 2020
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -360,6 +360,12 @@ local TDT=$(date "+%d %B %Y")
   if [ -n "$FOX_RECOVERY_VENDOR_PARTITION" ]; then
      echo -e "${RED}-- Changing the recovery vendor partition to \"$FOX_RECOVERY_VENDOR_PARTITION\" ${NC}"
      sed -i -e "s|^VENDOR_PARTITION=.*|VENDOR_PARTITION=\"$FOX_RECOVERY_VENDOR_PARTITION\"|" $F
+  fi
+
+  # debug mode for the installer? (just for testing purposes - don't ship the recovery with this enabled)
+  if [ "$FOX_INSTALLER_DEBUG_MODE" = "1" -o "$FOX_INSTALLER_DEBUG_MODE" = "true" ]; then
+     echo -e "${WHITEONRED}-- Enabling debug mode in the zip installer! You must disable \"FOX_INSTALLER_DEBUG_MODE\" before release! ${NC}"
+     sed -i -e "s|^FOX_INSTALLER_DEBUG_MODE=.*|FOX_INSTALLER_DEBUG_MODE=\"1\"|" $F
   fi
 
   # A/B devices
