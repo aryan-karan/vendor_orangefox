@@ -942,7 +942,7 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
   fi
 
   # Include standalone "grep" binary ?
-  if [ "$FOX_USE_GREP_BINARY" = "1" ]; then
+  if [ "$FOX_USE_GREP_BINARY" = "1" -a -x $FOX_VENDOR_PATH/Files/grep ]; then
       echo -e "${GREEN}-- Copying the GNU \"grep\" binary ...${NC}"
       rm -f $FOX_RAMDISK/sbin/grep $FOX_RAMDISK/sbin/egrep $FOX_RAMDISK/sbin/fgrep
       $CP -pf $FOX_VENDOR_PATH/Files/grep $FOX_RAMDISK/sbin/
