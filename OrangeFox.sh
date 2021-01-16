@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #	This file is part of the OrangeFox Recovery Project
-# 	Copyright (C) 2018-2020 The OrangeFox Recovery Project
+# 	Copyright (C) 2018-2021 The OrangeFox Recovery Project
 #
 #	OrangeFox is free software: you can redistribute it and/or modify
 #	it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 26 December 2020
+# 16 January 2021
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -939,6 +939,18 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
   else
      $CP -p $FOX_VENDOR_PATH/Files/aapt $FOX_RAMDISK/sbin/aapt
      chmod 0755 $FOX_RAMDISK/sbin/aapt
+  fi
+
+  # Include standalone "grep" binary ?
+  if [ "$FOX_USE_GREP_BINARY" = "1" ]; then
+      echo -e "${GREEN}-- Copying the GNU \"grep\" binary ...${NC}"
+      rm -f $FOX_RAMDISK/sbin/grep $FOX_RAMDISK/sbin/egrep $FOX_RAMDISK/sbin/fgrep
+      $CP -pf $FOX_VENDOR_PATH/Files/grep $FOX_RAMDISK/sbin/
+      echo '#!/sbin/sh' &> "$FOX_RAMDISK/sbin/fgrep"
+      echo '#!/sbin/sh' &> "$FOX_RAMDISK/sbin/egrep"
+      echo 'exec grep -F "$@"' >> "$FOX_RAMDISK/sbin/fgrep"
+      echo 'exec grep -E "$@"' >> "$FOX_RAMDISK/sbin/egrep"
+      chmod 0755 $FOX_RAMDISK/sbin/grep $FOX_RAMDISK/sbin/fgrep $FOX_RAMDISK/sbin/egrep
   fi
 
   # Get Magisk version
