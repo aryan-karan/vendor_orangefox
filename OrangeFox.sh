@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 20 February 2021
+# 23 February 2021
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -75,6 +75,15 @@ if [ "$FOX_DRASTIC_SIZE_REDUCTION" = "1" ]; then
    export FOX_USE_ZIP_BINARY=0
    export FOX_USE_NANO_EDITOR=0
    export FOX_USE_TAR_BINARY=0
+fi
+
+# check out some incompatible settings
+if [ "$OF_SUPPORT_ALL_BLOCK_OTA_UPDATES" = "1" ]; then
+   if [ "$OF_DISABLE_MIUI_SPECIFIC_FEATURES" = "1" -o "$OF_TWRP_COMPATIBILITY_MODE" = "1" -o "$OF_VANILLA_BUILD" = "1" ]; then
+      echo -e "${WHITEONRED}-- ERROR! \"OF_SUPPORT_ALL_BLOCK_OTA_UPDATES\" is incompatible with \"OF_DISABLE_MIUI_SPECIFIC_FEATURES\" or \"OF_TWRP_COMPATIBILITY_MODE\"${NC}"
+      echo -e "${WHITEONRED}-- Sort out your build vars! Quitting ... ${NC}"
+      abort 98
+   fi
 fi
 
 if [ "$FOX_DRASTIC_SIZE_REDUCTION" = "1" -a "$BUILD_2GB_VERSION" = "1" ]; then
