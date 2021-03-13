@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 23 February 2021
+# 13 March 2021
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -297,6 +297,7 @@ local F=$1
    sed -i '/FOX_VENDOR_CMD/d' $F
    sed -i '/FOX_VENDOR/d' $F
    sed -i '/OF_MAINTAINER/d' $F
+   sed -i '/FOX_USE_SPECIFIC_MAGISK_ZIP/d' $F
    sed -i "s/declare -x //g" $F
 }
 
@@ -411,6 +412,16 @@ local TDT=$(date "+%d %B %Y")
      echo -e "${GREEN}-- Deleting the magisk addon zips ...${NC}"
      rm -f $OF_WORKING_DIR/sdcard/Fox/FoxFiles/Magisk.zip
      rm -f $OF_WORKING_DIR/sdcard/Fox/FoxFiles/unrootmagisk.zip
+  fi
+
+  # are we using a specific magisk zip?
+  if [ -n "$FOX_USE_SPECIFIC_MAGISK_ZIP" ]; then
+     if [ -e $FOX_USE_SPECIFIC_MAGISK_ZIP ]; then
+        echo -e "${WHITEONGREEN}-- Using magisk zip: \"$FOX_USE_SPECIFIC_MAGISK_ZIP\" ${NC}"
+        $CP -pf $FOX_USE_SPECIFIC_MAGISK_ZIP $OF_WORKING_DIR/sdcard/Fox/FoxFiles/Magisk.zip
+     else
+        echo -e "${WHITEONRED}-- I cannot find \"$FOX_USE_SPECIFIC_MAGISK_ZIP\"! Using the default.${NC}"
+     fi
   fi
 
   # use anykernel3 version of OF_initd
@@ -972,7 +983,12 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
   fi
 
   # Get Magisk version
-  MAGISK_VER=$(unzip -c $FOX_VENDOR_PATH/FoxFiles/Magisk.zip common/util_functions.sh | grep MAGISK_VER= | sed -E 's+MAGISK_VER="(.*)"+\1+')
+  tmp1=$FOX_VENDOR_PATH/FoxFiles/Magisk.zip
+  if [ -n "$FOX_USE_SPECIFIC_MAGISK_ZIP" -a -e "$FOX_USE_SPECIFIC_MAGISK_ZIP" ]; then
+     tmp1=$FOX_USE_SPECIFIC_MAGISK_ZIP
+  fi
+  MAGISK_VER=$(unzip -c $tmp1 common/util_functions.sh | grep MAGISK_VER= | sed -E 's+MAGISK_VER="(.*)"+\1+')
+#  MAGISK_VER=$(unzip -c $FOX_VENDOR_PATH/FoxFiles/Magisk.zip common/util_functions.sh | grep MAGISK_VER= | sed -E 's+MAGISK_VER="(.*)"+\1+')
   echo -e "${GREEN}-- Detected Magisk version: ${MAGISK_VER}${NC}"
   sed -i -E "s+\"magisk_ver\" value=\"(.*)\"+\"magisk_ver\" value=\"$MAGISK_VER\"+" $FOX_RAMDISK/twres/ui.xml
 
