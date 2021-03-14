@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 13 March 2021
+# 14 March 2021
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -224,6 +224,12 @@ filesize() {
   [ -z "$1" -o -d "$1" ] && { echo "0"; return; }
   [ ! -e "$1" -a ! -h "$1" ] && { echo "0"; return; }
   stat -c %s "$1"
+}
+
+# file_getprop <file> <property>
+file_getprop() { 
+  local F=$(grep -m1 "^$2=" "$1" | cut -d= -f2)
+  echo $F | sed 's/ *$//g'
 }
 
 # to save the build date, and (if desired) patch bugged alleged anti-rollback on some ROMs
@@ -546,13 +552,6 @@ local ZIP_CMD="zip --exclude=*.git* -r9 $ZIP_FILE ."
    echo " $(/bin/ls -laFt $ZIP_FILE)"
    rm -f $F
 } # function
-
-
-# file_getprop <file> <property>
-file_getprop() { 
-  local F=$(grep "^$2=" "$1" | cut -d= -f2)
-  echo $F | sed 's/ *$//g'
-}
 
 # are we using toolbox/toybox?
 uses_toolbox() {

@@ -23,12 +23,12 @@
 #
 #
 # * Author: DarthJabba9
-# * Date:   20200907
+# * Date:   20210314
 # * Identify some ROM features and hardware components
 # * Do some other sundry stuff
 #
 #
-SCRIPT_LASTMOD_DATE="20200907"
+SCRIPT_LASTMOD_DATE="20210314"
 C="/tmp_cust"
 LOG="/tmp/recovery.log"
 CFG="/etc/orangefox.cfg"
@@ -63,7 +63,7 @@ fi
 # file_getprop <file> <property>
 file_getprop() 
 { 
-  local F=$(grep "^$2=" "$1" | cut -d= -f2)
+  local F=$(grep -m1 "^$2=" "$1" | cut -d= -f2)
   echo $F | sed 's/ *$//g'
 }
 
