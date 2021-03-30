@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 27 March 2021
+# 30 March 2021
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -317,7 +317,7 @@ local TDT=$(date "+%d %B %Y")
   # names of output zip file(s)
   ZIP_FILE=$OUT/$FOX_OUT_NAME.zip
   ZIP_FILE_GO=$OUT/$FOX_OUT_NAME"_lite.zip"
-  echo "- Creating $ZIP_FILE for deployment ..."
+  echo "-- Creating $ZIP_FILE for deployment ..."
   
   # clean any existing files
   rm -rf $OF_WORKING_DIR
@@ -430,14 +430,12 @@ local TDT=$(date "+%d %B %Y")
      fi
   fi
 
-  # use anykernel3 version of OF_initd
-  rm -f $OF_WORKING_DIR/sdcard/Fox/FoxFiles/OF_initd.zip
+  # initd addon
   if [ "$FOX_DELETE_INITD_ADDON" = "1" ]; then
      echo -e "${GREEN}-- Deleting the initd addon ...${NC}"
      rm -f $OF_WORKING_DIR/sdcard/Fox/FoxFiles/OF_initd*.zip
   else
-     echo -e "${GREEN}-- Using OF_initd-ak3 zip ...${NC}"
-     mv -f $OF_WORKING_DIR/sdcard/Fox/FoxFiles/OF_initd-ak3.zip $OF_WORKING_DIR/sdcard/Fox/FoxFiles/OF_initd.zip
+     echo -e "${GREEN}-- Copying the initd addon ...${NC}"
   fi
   
   # alternative/additional device codename? (eg, "kate" (for kenzo); "willow" (for ginkgo))
