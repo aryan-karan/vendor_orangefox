@@ -586,6 +586,7 @@ local F=""
       rm -f $FOX_RAMDISK/sbin/zip
       rm -f $FOX_RAMDISK/sbin/nano
       rm -f $FOX_RAMDISK/sbin/gnutar
+      rm -f $FOX_RAMDISK/sbin/gnused
       rm -f $FOX_RAMDISK/sbin/bash
       rm -f $FOX_RAMDISK/etc/bash.bashrc
       [ "$FOX_REPLACE_BUSYBOX_PS" != "1" ] && rm -f $FFil/ps
@@ -907,6 +908,13 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
       echo -e "${GREEN}-- Copying the GNU \"tar\" binary (gnutar) ...${NC}"
       $CP -pf $FOX_VENDOR_PATH/Files/gnutar $FOX_RAMDISK/sbin/
       chmod 0755 $FOX_RAMDISK/sbin/gnutar
+  fi
+
+  # Include standalone "sed" binary ?
+  if [ "$FOX_USE_SED_BINARY" = "1" ]; then
+      echo -e "${GREEN}-- Copying the GNU \"sed\" binary (gnused) ...${NC}"
+      $CP -pf $FOX_VENDOR_PATH/Files/gnused $FOX_RAMDISK/sbin/
+      chmod 0755 $FOX_RAMDISK/sbin/gnused
   fi
 
   # Include "unzip" binary ?
