@@ -59,7 +59,7 @@ FOX_RESET_SETTINGS="1"
 OF_VANILLA_BUILD=0
 
 # last_modified
-MOD_DATE="20210415"
+MOD_DATE="20210424"
   
 # sundry glodal defaults
 # VEND_DIR="/vendor"
@@ -134,7 +134,7 @@ umount_part() {
 
   local F=$(is_mounted "$1")
   if [ "$F" = "1" ]; then
-     umount "$1"
+     umount "$1" > /dev/null 2>&1
   fi
 }
 
@@ -420,13 +420,18 @@ local F="0"
      fi 
  fi
  
-  F="$cache_dir"recovery/
-  [ ! -d $F ] && mkdir -p $F
-  ui_print "- OrangeFox fresh installation - "$F"Fox_Installed"
-  echo "FOX_NEW=1" > "$F"Fox_Installed
-  [ ! -f "$F"Fox_Installed ] && {
+ if [ "$OF_AB_DEVICE" = "1" -o "$(Is_AB_Device)" = "1" ]; then
+    ui_print "- A/B device: the post-install patches will not be processed."
+    return
+ fi
+ 
+ F="$cache_dir"recovery/
+ [ ! -d $F ] && mkdir -p $F
+ ui_print "- OrangeFox fresh installation - "$F"Fox_Installed"
+ echo "FOX_NEW=1" > "$F"Fox_Installed
+ [ ! -f "$F"Fox_Installed ] && {
     ui_print "- Error writing to the cache directory ($cache_dir); the post-install patches will not be processed."
-  }
+ }
 }
 
 # unzip the installer package into /tmp
@@ -686,7 +691,7 @@ Main() {
     	mkdir -p $internal_SD/Fox/logs
     	ui_print "- Backing up recovery.log to $internal_SD/Fox/logs/install.log ..."
 	cp -a /tmp/recovery.log $internal_SD/Fox/logs/install.log
-   	[ "$internal_SD" = "/sdcard" ] && umount_part "$internal_SD"
+   	[ "$internal_SD" = "/sdcard" ] && umount_part "$internal_SD" > /dev/null 2>&1
 
 # umount
 	UnMountThemAll
