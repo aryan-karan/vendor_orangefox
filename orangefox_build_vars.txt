@@ -5,7 +5,7 @@
 # These should be declared - in a shell script (eg, in "vendorsetup.sh"), or at the command line - before building
 #
 # Copyright (C) 2019-2021 OrangeFox Recovery Project
-# Date: 08 April 2021
+# Date: 05 June 2021
 #
 # -----------------------------------
 #
@@ -366,6 +366,12 @@
  - resource error messages in the recovery's debug screen
  - default = 0
 #
+"FOX_EXTREME_SIZE_REDUCTION" [NEW] [HIGHLY EXPERIMENTAL!]
+ - Set this to 1 for some extreme attempts to reduce the size of the recovery image (if FOX_DRASTIC_SIZE_REDUCTION does not achieve enough reduction)
+ - Use this with EXTREME CAUTION and test the result carefully - a bootloop is a possibility
+ - One effect of using this is a change the terminal font, and you may not like the look of the font
+ - default = 0
+#
 "OF_CHECK_OVERWRITE_ATTEMPTS" [NEW]
  - Set this to 1 to check for attempts by a ROM's installer to overwrite OrangeFox with another recovery
  - If this is enabled, then OrangeFox will give users a 40-second countdown, to enable
@@ -420,12 +426,7 @@
 - Set this to 1 to enable the new TWRP auto-detection of system-as-root in the installed ROM
 - default = 0
 #
-"FOX_R11" [DEPCRECATED!]
-- this should NOT be used - unless you are enabling "FOX_DRASTIC_SIZE_REDUCTION"
-- it is only relevant if building R11 with "export FOX_DRASTIC_SIZE_REDUCTION=1"
-- it only serves to ensure that certain things are not deleted from an R11 build
-- it will eventually become obsolete
-- default = 0
+"FOX_R11" [OBSOLETE]
 #
 "OF_QUICK_BACKUP_LIST" [NEW] [R11 only]
 - Use this to specify the desired default list of partitions selected for "Quick Backup"

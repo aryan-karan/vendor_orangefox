@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 30 March 2021
+# 05 June 2021
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -64,18 +64,26 @@ abort() {
   exit $1
 }
 
+# extreme reduction
+if [ "$FOX_EXTREME_SIZE_REDUCTION" = "1" ]; then
+   export FOX_DRASTIC_SIZE_REDUCTION=1
+fi
+
 # remove all extras if FOX_DRASTIC_SIZE_REDUCTION is defined
 if [ "$FOX_DRASTIC_SIZE_REDUCTION" = "1" ]; then
-   export BUILD_2GB_VERSION=0
-   export FOX_REMOVE_AAPT=1
-   export FOX_REMOVE_BASH=1
-   export FOX_REMOVE_ZIP_BINARY=1
-   export FOX_USE_BASH_SHELL=0
-   export FOX_ASH_IS_BASH=0
-   export FOX_USE_ZIP_BINARY=0
-   export FOX_USE_NANO_EDITOR=0
-   export FOX_USE_TAR_BINARY=0
+	export FOX_USE_BASH_SHELL=0
+	export FOX_ASH_IS_BASH=0
+	export FOX_USE_UNZIP_BINARY=0
+	export FOX_USE_TAR_BINARY=0
+	export FOX_USE_SED_BINARY=0
+	export FOX_USE_GREP_BINARY=0
+	export FOX_USE_NANO_EDITOR=0
+	export BUILD_2GB_VERSION=0
+	export FOX_REMOVE_BASH=1
+	export FOX_REMOVE_AAPT=1
+	export FOX_REMOVE_ZIP_BINARY=1
 fi
+
 
 # check out some incompatible settings
 if [ "$OF_SUPPORT_ALL_BLOCK_OTA_UPDATES" = "1" ]; then
@@ -569,18 +577,20 @@ uses_toolbox() {
  [ "$T" = "toybox" ] && echo "1" || echo "0"
 }
 
-# try to trim the ramdisk for really small recovery partitions
-# can reduce the recovery image size by up to 3MB
+# Try to trim the ramdisk for really small recovery partitions
+# This can reduce the recovery image size by up to 3.6 MB
 reduce_ramdisk_size() {
-local big_xml=$FOX_RAMDISK/twres/pages/customization.xml
-local small_xml=$FOX_RAMDISK/twres/pages/smaller_size.txt
+local custom_xml=$FOX_RAMDISK/twres/pages/customization.xml
 local image_xml=$FOX_RAMDISK/twres/resources/images.xml
+local CURRDIR=$PWD
+local TWRES_DIR=$FOX_RAMDISK/twres
+local FFil="$FOX_RAMDISK/FFiles"
 local C=""
-local D=""
 local F=""
 
       echo -e "${GREEN}-- Pruning the ramdisk to reduce the size ... ${NC}"
-      local FFil="$FOX_RAMDISK/FFiles"
+
+      # remove some large files
       rm -rf $FFil/nano
       rm -f $FOX_RAMDISK/sbin/aapt
       rm -f $FOX_RAMDISK/sbin/zip
@@ -596,78 +606,80 @@ local F=""
          rm -rf $FFil/OF_verity_crypt
       fi
       
-      # --- some sanity checks - try to restore some originals 
-      if [ "$FOX_USE_BASH_SHELL" = "1" ]; then
-          rm -f $FOX_RAMDISK/sbin/sh
-          if [ -f $WORKING_TMP/sh ] || [ -h $WORKING_TMP/sh -a "$(readlink $WORKING_TMP/sh)" != "bash" ]; then
-             $CP -p $WORKING_TMP/sh $FOX_RAMDISK/sbin/
-          else
-             F=$(readlink $FOX_RAMDISK/sbin/umount)
-             [ -z "$F" ] && F=$(readlink $FOX_RAMDISK/sbin/uname)
-             ln -s $F $FOX_RAMDISK/sbin/sh
-          fi
-      fi
-         
-      if [ "$FOX_ASH_IS_BASH" = "1" ]; then
-          rm -f $FOX_RAMDISK/sbin/ash
-          if [ -h $WORKING_TMP/ash -a "$(readlink $WORKING_TMP/ash)" != "bash" ]; then
-             $CP -p $WORKING_TMP/ash $FOX_RAMDISK/sbin/
-          fi
-      fi
-      
-      if [ "$FOX_USE_UNZIP_BINARY" = "1" ]; then
-         [ -e $WORKING_TMP/unzip -o -h $WORKING_TMP/unzip ] && { 
-            rm -f $FOX_RAMDISK/sbin/unzip
-            $CP -apf $WORKING_TMP/unzip $FOX_RAMDISK/sbin/
-         }
-      fi
-      
-      # 2GB version bail out here
-      [ "$1" = "lite" ] && return
+      # fonts to be deleted      
+      declare -a FontFiles=(
+        "Amatic" 
+	"Chococooky" 
+	"Exo2-Medium"
+	"Exo2-Regular"
+	"EuclidFlex-Medium"
+	"EuclidFlex-Regular"
+	"GoogleSans-Medium"
+	"GoogleSans-Regular"
+        "FiraCode-Medium" 
+	"MILanPro-Medium"
+        "MILanPro-Regular")
 
-      # remove some theme colours (not for R11)
-      if [ "$FOX_R11" != "1" ]; then
-         echo -e "${GREEN}-- Removing some theme colours ... ${NC}"
-      	 declare -a fColors=("Amber" "Brown" "Pink" "Purple")
-         for i in "${fColors[@]}"
-         do
-       		F=$FOX_RAMDISK/twres/images/$i
-       		[ -d $F ] && rm -rf $F
-       		C="Color"$i
-       		# don't load it in the UI
-       		sed -i -e "/$C/d" $image_xml
-         done
-      fi
+	# first of all, substitute the fonts that will be deleted
+	XML=$TWRES_DIR/themes/font.xml
+	sed -i -e "s/GoogleSans/Roboto/g" $XML
 
-      # ----- proceeding to remove some fonts can save about 460kb in size -----
- 
-      # remove some fonts? (only do so if we have a working "small" xml to cover the situation)
-      echo -e "${GREEN}-- Removing some fonts ... ${NC}"
-      if [ "$FOX_R11" = "1" ]; then
-         declare -a FontFiles=(
-         "Amatic" "Chococooky" "Exo2-Medium" "Exo2-Regular"
-         "Firacode-Medium" "Firacode-Regular" "MILanPro-Medium"
-         "MILanPro-Regular")
-      else
-         declare -a FontFiles=("Amatic" "AngryBirds" "Bender" "Cooljazz" "Chococooky") 
-      fi
-         
-      # delete the font (*.ttf) tiles
-      for i in "${FontFiles[@]}"
-      do
+	XML=$TWRES_DIR/resources/images.xml
+	sed -i -e "s/EuclidFlex/Roboto/g" $XML
+	sed -i -e "s/GoogleSans/Roboto/g" $XML
+
+	XML=$TWRES_DIR/splash.xml
+	sed -i -e "s/EuclidFlex/Roboto/g" $XML
+	sed -i -e "s/GoogleSans/Roboto/g" $XML
+
+	XML=$TWRES_DIR/themes/sed/splash.xml
+	sed -i -e "s/EuclidFlex/Roboto/g" $XML
+
+	XML=$TWRES_DIR/themes/sed/splash_orig.xml
+	sed -i -e "s/EuclidFlex/Roboto/g" $XML
+
+	if [ "$FOX_EXTREME_SIZE_REDUCTION" = "1" ]; then
+     	   sed -i -e "s/FiraCode/Roboto/g" $TWRES_DIR/resources/images.xml
+     	   sed -i -e "s/FiraCode/Roboto/g" $TWRES_DIR/splash.xml
+     	fi
+
+      	# delete the font files
+      	for i in "${FontFiles[@]}"
+      	do
      	   C=$i".ttf"
-     	   F=$FOX_RAMDISK/twres/fonts/$C
+     	   F=$TWRES_DIR/fonts/$C
      	   rm -f $F
-     	   # remove references to them in images.xml 
+     	   # remove references to them in resources/images.xml 
      	   sed -i "/$C/d" $image_xml
-      done
+      	done
 
-      # delete the matching line plus the next 2 lines
-      for i in {5..9}; do
+      	# delete the matching line plus the next 2 lines
+      	for i in {3..9}; do
     	   F="font"$i
-     	   sed -i "/$F/I,+2 d" $big_xml
-      done
-      
+     	   # remove references to them in customization.xml		   
+     	   sed -i "/$F/I,+2 d" $custom_xml
+      	done
+
+	# extreme reduction: delete some pngs and one more font
+	if [ "$FOX_EXTREME_SIZE_REDUCTION" = "1" ]; then
+	   echo -e "${WHITEONORANGE}-- Now, we are doing some extreme pruning ... ${NC}"
+	   cd $TWRES_DIR/images/Splash
+	   rm -f empty.png
+	   rm -f user.png
+	   rm -f logo_d.png
+	   rm -f logo_o.png
+	   XML=$TWRES_DIR/resources/images.xml
+	   sed -i -e "/Splash\//d" $XML
+	   
+	   # font deletion (NOTE: doing this changes the terminal font, and you may not like the result)
+	   C="FiraCode-Regular.ttf"
+     	   F=$TWRES_DIR/fonts/$C
+     	   rm -f $F
+     	   sed -i "/$C/d" $image_xml
+	fi
+	
+	# return to where we started from
+	cd $CURRDIR
 }
 
 # ****************************************************
