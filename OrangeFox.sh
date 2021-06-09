@@ -34,6 +34,10 @@ elif [ "$FOX_BUILD_DEBUG_MESSAGES" = "1" ]; then
    set -o xtrace
 fi
 
+if [ "$FOX_DEBUG_BUILD_RAW_IMAGE" = "1" ]
+then exit 0
+fi
+
 # some colour codes
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -249,7 +253,12 @@ local F="$DEFAULT_PROP_ROOT"
    	sed -i -e "s/ro.build.date.utc=.*/ro.build.date.utc=$DT/g" $F || \
    	echo "ro.build.date.utc=$DT" >> $F
 
-   [ -n "$2" ] && DT="$2" # don't change the true bootimage build date
+   if [ "$FOX_REPLACE_BOOTIMAGE_DATE" = "1" ]; then
+      echo -e "${GREEN}-- Replacing bootimage time ${NC}"
+   else
+      [ -n "$2" ] && DT="$2" # don't change the true bootimage build date
+   fi
+   
    grep -q "ro.bootimage.build.date.utc=" $F && \
    	sed -i -e "s/ro.bootimage.build.date.utc=.*/ro.bootimage.build.date.utc=$DT/g" $F || \
    	echo "ro.bootimage.build.date.utc=$DT" >> $F
@@ -1004,6 +1013,17 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
       echo 'exec grep -F "$@"' >> "$FOX_RAMDISK/sbin/fgrep"
       echo 'exec grep -E "$@"' >> "$FOX_RAMDISK/sbin/egrep"
       chmod 0755 $FOX_RAMDISK/sbin/grep $FOX_RAMDISK/sbin/fgrep $FOX_RAMDISK/sbin/egrep
+  fi
+
+  # Use a custom Maintainer Picture for about section [Yilliee]
+  if [ -n "$OF_MAINTAINER_AVATAR" ]; then
+      if [ -f "$OF_MAINTAINER_AVATAR" ]; then
+            echo -e "${GREEN}-- Using a custom maintainer picture from $OF_MAINTAINER_AVATAR ...${NC}"
+            $CP -p "$OF_MAINTAINER_AVATAR" "$FOX_RAMDISK/twres/images/Default/About/maintainer.png"
+      else
+            echo -e "${WHITEONRED}-- File $OF_MAINTAINER_AVATAR not found  ...${NC}"
+            echo -e "${WHITEONRED}-- Using default image for maintainer's about section ...${NC}"
+      fi
   fi
 
   # Get Magisk version
