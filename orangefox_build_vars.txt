@@ -5,7 +5,7 @@
 # These should be declared - in a shell script (eg, in "vendorsetup.sh"), or at the command line - before building
 #
 # Copyright (C) 2019-2021 OrangeFox Recovery Project
-# Date: 05 June 2021
+# Date: 15 July 2021
 #
 # -----------------------------------
 #
@@ -455,7 +455,7 @@
 #
 "FOX_USE_UNZIP_BINARY" [NEW]
 - Set this to 1 to replace the busybox/toolbox unzip with a full InfoZip unzip binary
-- Use with care, and ensure that it works as you expect
+- Use with care, and ensure that it works as you expect; do not use it for releases
 - default = 0
 #
 "FOX_REMOVE_ZIP_BINARY" [NEW]

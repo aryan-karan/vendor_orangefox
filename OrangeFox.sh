@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 05 June 2021
+# 15 July 2021
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -34,8 +34,8 @@ elif [ "$FOX_BUILD_DEBUG_MESSAGES" = "1" ]; then
    set -o xtrace
 fi
 
-if [ "$FOX_DEBUG_BUILD_RAW_IMAGE" = "1" ]
-then exit 0
+if [ "$FOX_DEBUG_BUILD_RAW_IMAGE" = "1" ]; then
+   exit 0
 fi
 
 # some colour codes
@@ -258,7 +258,7 @@ local F="$DEFAULT_PROP_ROOT"
    else
       [ -n "$2" ] && DT="$2" # don't change the true bootimage build date
    fi
-   
+
    grep -q "ro.bootimage.build.date.utc=" $F && \
    	sed -i -e "s/ro.bootimage.build.date.utc=.*/ro.bootimage.build.date.utc=$DT/g" $F || \
    	echo "ro.bootimage.build.date.utc=$DT" >> $F
@@ -293,7 +293,7 @@ local T1=$PWD
   cd "$1"
   local T2=$PWD
   cd $T1
-  echo "$T2"    
+  echo "$T2"
 }
 
 # expand
@@ -353,6 +353,11 @@ local TDT=$(date "+%d %B %Y")
   
   # copy recovery image
   $CP -p $RECOVERY_IMAGE ./recovery.img
+  
+  # copy the Samsung .tar file if it exists
+  if [ -f $RECOVERY_IMAGE".tar" ]; then
+     $CP -p $RECOVERY_IMAGE".tar" .
+  fi
    
   # copy installer bins and script 
   $CP -pr $INST_DIR/* .
@@ -832,11 +837,11 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
 
      # remove the "green LED" tick box (the line where it is found + the next 2 lines)
      green_setting="fox_use_green_led"
-     sed -i "/$green_setting/I,+2 d" $Led_xml_File
+#     sed -i "/$green_setting/I,+2 d" $Led_xml_File
 
      # remove the text label
      green_setting="fox_led_title"
-     sed -i "/$green_setting/I,+0 d" $Led_xml_File
+#     sed -i "/$green_setting/I,+0 d" $Led_xml_File
   fi
 
   # remove extra "More..." link in the "About" screen?
@@ -844,10 +849,10 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
      echo -e "${GREEN}-- Disabling the \"More...\" link in the \"About\" page ...${NC}"
      Led_xml_File=$FOX_RAMDISK/twres/pages/settings.xml
      green_setting="btn_about_credits"
-     sed -i "/$green_setting/I,+8 d" $Led_xml_File
+#     sed -i "/$green_setting/I,+8 d" $Led_xml_File
      
      green_setting="floating_btn"
-     sed -i "/$green_setting/I,+6 d" $Led_xml_File
+#     sed -i "/$green_setting/I,+6 d" $Led_xml_File
   fi
 
   # remove the "splash" setting?
@@ -857,15 +862,15 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
 
      # remove the "splash" setting (the line where it is found + the next 8 lines)
      green_setting="sph_sph"
-     sed -i "/$green_setting/I,+8 d" $Led_xml_File
+#    sed -i "/$green_setting/I,+8 d" $Led_xml_File
   fi
 
   # disable the magisk addon ui entries?
   if [ "$FOX_DELETE_MAGISK_ADDON" = "1" ]; then
      echo -e "${GREEN}-- Disabling the magisk addon entries in advanced.xml ...${NC}"
      Led_xml_File=$FOX_RAMDISK/twres/pages/advanced.xml
-     sed -i "/Magisk Manager/I,+5 d" $Led_xml_File
-     #sed -i "/magisk_ver/I,+7 d" $Led_xml_File
+
+#     sed -i "/Magisk Manager/I,+5 d" $Led_xml_File
      sed -i "/>mod_magisk</I,+0 d" $Led_xml_File
      sed -i "/>mod_unmagisk</I,+0 d" $Led_xml_File
      sed -i "s/>Magisk</>Magisk ({@disabled})</" $Led_xml_File
@@ -945,7 +950,7 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
       	 $CP -pf $FOX_RAMDISK/sbin/unzip $WORKING_TMP/
       fi
       
-      echo -e "${GREEN}-- Copying the OrangeFox InfoZip \"unzip\" binary ...${NC}"
+      echo -e "${WHITEONRED}-- Copying the OrangeFox InfoZip \"unzip\" binary. Must only be used for testing - NOT for releases...${NC}"
       rm -f $FOX_RAMDISK/sbin/unzip
       $CP -pf $FOX_VENDOR_PATH/Files/unzip $FOX_RAMDISK/sbin/
       chmod 0755 $FOX_RAMDISK/sbin/unzip
@@ -996,8 +1001,7 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
   if [ "$FOX_DISABLE_APP_MANAGER" = "1" ]; then
      echo -e "${GREEN}-- Disabling the App Manager in advanced.xml ...${NC}"
      Led_xml_File=$FOX_RAMDISK/twres/pages/advanced.xml
-     #sed -i "/appmgr_title/I,+3 d" $Led_xml_File
-     sed -i '/name="{@appmgr_title}"/I,+3 d' $Led_xml_File
+#     sed -i '/name="{@appmgr_title}"/I,+3 d' $Led_xml_File
      # remove aapt also, as it would be redundant
      echo -e "${GREEN}-- Omitting the aapt binary ...${NC}"
      rm -f $FOX_RAMDISK/sbin/aapt
@@ -1098,6 +1102,7 @@ fi
 
 # repack the recovery image
 if [ -z "$FOX_VENDOR_CMD" ] || [ "$FOX_VENDOR_CMD" = "Fox_After_Recovery_Image" ]; then
+
      if [ "$OF_SAMSUNG_DEVICE" = "1" -o "$OF_SAMSUNG_DEVICE" = "true" ]; then
         SAMSUNG_DEVICE="samsung"
      else
@@ -1134,7 +1139,9 @@ if [ -z "$FOX_VENDOR_CMD" ] || [ "$FOX_VENDOR_CMD" = "Fox_After_Recovery_Image" 
      #
      if [ "$SAMSUNG_DEVICE" = "samsung" -a "$OF_NO_SAMSUNG_SPECIAL" != "1" ]; then
      	echo -e "${RED}-- Creating Odin flashable recovery tar ($RECOVERY_IMAGE.tar) ... ${NC}"
-     	#tar -C $(dirname "$RECOVERY_IMAGE") -H ustar -c $(basename "$RECOVERY_IMAGE") > $RECOVERY_IMAGE".tar"
+
+     	# make sure that the image being tarred is the correct one
+     	$CP -pf "$RECOVERY_IMAGE" $INSTALLED_RECOVERYIMAGE_TARGET
      	tar -C $(dirname "$RECOVERY_IMAGE") -H ustar -c recovery.img > $RECOVERY_IMAGE".tar"
      fi
 
