@@ -19,7 +19,7 @@
 # 	Please maintain this if you use this script or any part of it
 #
 # ******************************************************************************
-# 17 July 2021
+# 30 July 2021
 #
 # For optional environment variables - to be declared before building,
 # see "orangefox_build_vars.txt" for full details
@@ -77,7 +77,6 @@ fi
 if [ "$FOX_DRASTIC_SIZE_REDUCTION" = "1" ]; then
 	export FOX_USE_BASH_SHELL=0
 	export FOX_ASH_IS_BASH=0
-	export FOX_USE_UNZIP_BINARY=0
 	export FOX_USE_TAR_BINARY=0
 	export FOX_USE_SED_BINARY=0
 	export FOX_USE_GREP_BINARY=0
@@ -950,19 +949,6 @@ if [ "$FOX_VENDOR_CMD" != "Fox_After_Recovery_Image" ]; then
       echo -e "${GREEN}-- Copying the GNU \"sed\" binary (gnused) ...${NC}"
       $CP -pf $FOX_VENDOR_PATH/Files/gnused $FOX_RAMDISK/sbin/
       chmod 0755 $FOX_RAMDISK/sbin/gnused
-  fi
-
-  # Include "unzip" binary ?
-  if [ "$FOX_USE_UNZIP_BINARY" = "1" -a -x $FOX_VENDOR_PATH/Files/unzip ]; then
-      if [ "$FOX_DRASTIC_SIZE_REDUCTION" = "1" -o $BUILD_2GB_VERSION = "1" ]; then
-         echo -e "${GREEN}-- Backing up the original unzip ...${NC}"
-      	 $CP -pf $FOX_RAMDISK/sbin/unzip $WORKING_TMP/
-      fi
-      
-      echo -e "${WHITEONRED}-- Copying the OrangeFox InfoZip \"unzip\" binary. Must only be used for testing - NOT for releases...${NC}"
-      rm -f $FOX_RAMDISK/sbin/unzip
-      $CP -pf $FOX_VENDOR_PATH/Files/unzip $FOX_RAMDISK/sbin/
-      chmod 0755 $FOX_RAMDISK/sbin/unzip
   fi
 
   # Include "zip" binary ?
