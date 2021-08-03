@@ -23,12 +23,12 @@
 #
 #
 # * Author: DarthJabba9
-# * Date:   20210712
+# * Date:   20210803
 # * Identify some ROM features and hardware components
 # * Do some other sundry stuff
 #
 #
-SCRIPT_LASTMOD_DATE="20210712"
+SCRIPT_LASTMOD_DATE="20210803"
 C="/tmp_cust"
 LOG="/tmp/recovery.log"
 CFG="/etc/orangefox.cfg"
@@ -469,6 +469,7 @@ local OPS=$(getprop "orangefox.postinit.status")
    echo "DEBUG: OrangeFox: FOX_SCRIPT_DATE=$SCRIPT_LASTMOD_DATE" >> $LOG
    $SETPROP orangefox.postinit.status 1
    $SETPROP ro.orangefox.sar "$SAR"
+   $SETPROP ro.orangefox.kernel "$OPS"
    
    # if someone is still using old recovery sources
    ln -s $CFG /tmp/orangefox.cfg
