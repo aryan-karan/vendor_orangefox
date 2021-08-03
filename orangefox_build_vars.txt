@@ -5,7 +5,7 @@
 # These should be declared - in a shell script (eg, in "vendorsetup.sh"), or at the command line - before building
 #
 # Copyright (C) 2019-2021 OrangeFox Recovery Project
-# Date: 30 July 2021
+# Date: 3 August 2021
 #
 # -----------------------------------
 #
@@ -227,9 +227,8 @@
    - default = 0
 #
 "FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER"
-   - set to 1 to use the TWRP build system's tools to build the recovery image
-   - requires patches to "build/core/Makefile" in the build system
-   - if in doubt, do NOT use this var
+   - set to 1 to use the official TWRP build system's tools to build the recovery image
+   - the current recommendation is to set this to 1
    - default = 0
 #
 "FOX_RESET_SETTINGS"
