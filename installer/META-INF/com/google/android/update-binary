@@ -31,6 +31,9 @@ PRODUCT_DEVICE=$($GETPROP "ro.product.device")
 # target partition
 RECOVERY_PARTITION=/dev/block/bootdevice/by-name/recovery
 
+# boot partition
+BOOT_PARTITION=/dev/block/bootdevice/by-name/boot
+
 # default system mount point
 SYSTEM_PARTITION=/dev/block/bootdevice/by-name/system
 
@@ -59,7 +62,7 @@ FOX_RESET_SETTINGS="1"
 OF_VANILLA_BUILD=0
 
 # last_modified
-MOD_DATE="20210424"
+MOD_DATE="20210805"
   
 # sundry glodal defaults
 # VEND_DIR="/vendor"
@@ -476,12 +479,12 @@ local PART
 
 	# target partition without the slot suffix
 	[ -z "$part_size" ] && part_size="0"
-	if [ "$part_size" != "0" -a -e "/dev/block/bootdevice/by-name/recovery_b" ]; then
-	    target="/dev/block/bootdevice/by-name/recovery"
+	if [ "$part_size" != "0" -a -e $RECOVERY_PARTITION"_b" ]; then
+	    target="$RECOVERY_PARTITION"
 	    name="recovery"
 	else
 	    ui_print "- Standard A/B device ..."
-	    target="/dev/block/bootdevice/by-name/boot"
+	    target="$BOOT_PARTITION"
 	    name="boot"
 	fi
 
