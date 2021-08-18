@@ -155,6 +155,7 @@ fi
 if [ -n "$TARGET_RECOVERY_ROOT_OUT" -a -e "$TARGET_RECOVERY_ROOT_OUT/default.prop" ]; then
    DEFAULT_PROP="$TARGET_RECOVERY_ROOT_OUT/default.prop"
 else
+   if [ -f "$FOX_RAMDISK/default.prop" ]; then readlink "$FOX_RAMDISK/default.prop" && rm -f "$FOX_RAMDISK/default.prop" && if [ -f "$FOX_RAMDISK/prop.default" ]; then mv "$FOX_RAMDISK/prop.default" "$FOX_RAMDISK/default.prop"; fi; fi
    [ -e "$FOX_RAMDISK/prop.default" ] && DEFAULT_PROP="$FOX_RAMDISK/prop.default" || DEFAULT_PROP="$FOX_RAMDISK/default.prop"
 fi
 
