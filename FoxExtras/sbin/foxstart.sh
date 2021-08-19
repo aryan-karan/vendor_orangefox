@@ -543,6 +543,9 @@ post_init() {
   }
 }
 
+# Missing symlinks
+if [ -f /sbin/toybox ]; then ln -s /sbin/toybox /system/bin/file; else echo $PATH; fi
+
 ### main() ###
 get_setprop
 
