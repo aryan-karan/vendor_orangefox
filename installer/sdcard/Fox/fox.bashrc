@@ -12,7 +12,7 @@ export HISTFILE=$HOME/.bash_history
 export PS1='\s-\v \w > '
 
 # aliases
-alias cls="clear"
+alias cl="clear"
 alias seek='find . -name "$@"'
 alias dirp="ls -all --color=auto -t | more"
 alias dirt="ls -all --color=auto -t"
@@ -32,5 +32,5 @@ alias makediff="diff -u -d -w -B"
 alias makediff_recurse="diff -U3 -d -w -rN"
 
 # go to a neutral location
-cd /tmp
+cd /sdcard
 #
