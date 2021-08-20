@@ -6,7 +6,7 @@
 #export PS1='\s-\v \w > '
 
 # aliases
-alias cls="clear"
+alias cl="clear"
 alias seek='find . -name "$@"'
 alias dir="ls -all --color=auto"
 alias rd="rmdir"
